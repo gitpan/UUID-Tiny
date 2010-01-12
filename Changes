@@ -1,5 +1,10 @@
 Revision history for UUID-Tiny
 
+1.0202  2010-01-12, caugustin.de
+        Fixed a small bug (calling _init_globals without need).
+        Introduced a test on clk_seq uniqueness (due to failed CPAN Tester's
+        ID 6357718). We'll see ...
+
 1.0201  2010-01-12, caugustin.de
         Bug #50519 fixed: Test number 03 fails on Windows (just skipping this
         test on MSWin32).

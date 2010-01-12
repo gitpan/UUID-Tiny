@@ -41,7 +41,7 @@ Version 1.0201
 
 =cut
 
-our $VERSION = '1.0201';
+our $VERSION = '1.0202';
 
 
 =head1 SYNOPSIS
@@ -695,7 +695,21 @@ sub _init_globals {
 
     if (!defined $Last_Pid || $Last_Pid != $$) {
         $Last_Pid = $$;
-        $Clk_Seq = _generate_clk_seq();
+        # $Clk_Seq = _generate_clk_seq();
+        my $new_clk_seq = _generate_clk_seq();
+        if (!defined($Clk_Seq) || $new_clk_seq != $Clk_Seq) {
+            $Clk_Seq = $new_clk_seq;
+        }
+        else {
+            $new_clk_seq = _generate_clk_seq();
+            if ($new_clk_seq != $Clk_Seq) {
+                $Clk_Seq = $new_clk_seq;
+            }
+            else {
+                croak __PACKAGE__
+                    . "::_init_globals(): Can't get unique clk_seq!";
+            }
+        }
         srand();
     }
 
@@ -722,7 +736,7 @@ sub _get_clk_seq {
 
 sub _generate_clk_seq {
     my $self = shift;
-    _init_globals();
+    # _init_globals();
 
     my @data;
     push @data, q{}  . $$;
