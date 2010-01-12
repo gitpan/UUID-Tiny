@@ -25,6 +25,10 @@ our $SHA1_CALCULATOR = undef;
 our $MD5_CALCULATOR = Digest::MD5->new();
 
 
+# ToDo:
+# - Check and report for undefined UUIDs with all UUID manipulating functions!
+# - Better error propagation for better debugging.
+
 
 
 =head1 NAME
@@ -33,11 +37,11 @@ UUID::Tiny - Pure Perl UUID Support With Functional Interface
 
 =head1 VERSION
 
-Version 1.02
+Version 1.0201
 
 =cut
 
-our $VERSION = '1.02';
+our $VERSION = '1.0201';
 
 
 =head1 SYNOPSIS

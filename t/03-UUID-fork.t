@@ -2,10 +2,17 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
+use Test::More;
 use Carp;
 
 use UUID::Tiny qw(:std);
+
+if ($^O eq 'MSWin32') {
+    plan skip_all => 'Pipe-open not supported on MSWin32';
+}
+else {
+	plan tests => 6
+}
 
 my %uuid;
 
