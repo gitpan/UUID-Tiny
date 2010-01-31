@@ -1,4 +1,4 @@
-UUID-Tiny Version 1.0202
+UUID-Tiny Version 1.03
 
 This is a Pure Perl module for the creation of UUIDs:
 
@@ -33,7 +33,7 @@ Should run from Perl 5.8 up and uses this modules (mostly Perl 5.8 core):
 
     Carp
     Digest::MD5
-    Digest::SHA1
+    Digest::SHA1 (or Digest::SHA or Digest::SHA::PurePerl)
     MIME::Base64
     Time::HiRes
     POSIX

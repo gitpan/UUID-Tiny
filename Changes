@@ -1,5 +1,11 @@
 Revision history for UUID-Tiny
 
+1.03    2010-01-31, caugustin.de
+        Once again clk_seq uniqueness and fixing some small bugs with
+        _get_clk_seq() (due to failed CPAN Tester's ID 6750882).
+        Changed COPYRIGHT due to rt.cpan.org Bug #53642.
+        License should now be shown in CPAN.
+
 1.0202  2010-01-12, caugustin.de
         Fixed a small bug (calling _init_globals without need).
         Introduced a test on clk_seq uniqueness (due to failed CPAN Tester's

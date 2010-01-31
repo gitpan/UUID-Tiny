@@ -37,11 +37,11 @@ UUID::Tiny - Pure Perl UUID Support With Functional Interface
 
 =head1 VERSION
 
-Version 1.0201
+Version 1.03
 
 =cut
 
-our $VERSION = '1.0202';
+our $VERSION = '1.03';
 
 
 =head1 SYNOPSIS
@@ -295,7 +295,7 @@ representations.
     my $v3_md5_UUID  = create_UUID(UUID_V3, $ns_uuid, $name_or_filehandle);
     my $v3_md5_UUID  = create_UUID(UUID_V3, $name_or_filehandle);
     my $v4_rand_UUID = create_UUID(UUID_V4);
-    my $v5_sha1_UUID = create_UUID(UUID_V5, $ns_uuid $name_or_filehandle);
+    my $v5_sha1_UUID = create_UUID(UUID_V5, $ns_uuid, $name_or_filehandle);
     my $v5_sha1_UUID = create_UUID(UUID_V5, $name_or_filehandle);
 
 Creates a binary UUID in network byte order (MSB first). For v3 and v5 UUIDs a
@@ -380,7 +380,7 @@ sub _create_v1_uuid {
     # Set random node in UUID ...
     substr $uuid, 10, 6, _random_node_id();
 
-    return _set_uuid_version($uuid => 0x10);
+    return _set_uuid_version($uuid, 0x10);
 }
 
 sub _create_v3_uuid {
@@ -415,7 +415,7 @@ sub _create_v3_uuid {
     # Use only first 16 Bytes ...
     $uuid = substr( $MD5_CALCULATOR->digest(), 0, 16 ); 
 
-    return _set_uuid_version( $uuid => 0x30 );
+    return _set_uuid_version( $uuid, 0x30 );
 }
 
 sub _create_v4_uuid {
@@ -425,7 +425,7 @@ sub _create_v4_uuid {
         $uuid .= pack 'I', _rand_32bit();
     }
 
-    return _set_uuid_version($uuid => 0x40);
+    return _set_uuid_version($uuid, 0x40);
 }
 
 sub _create_v5_uuid {
@@ -464,7 +464,7 @@ sub _create_v5_uuid {
     # Use only first 16 Bytes ...
     $uuid = substr( $SHA1_CALCULATOR->digest(), 0, 16 );
 
-    return _set_uuid_version($uuid => 0x50);
+    return _set_uuid_version($uuid, 0x50);
 }
 
 sub _set_uuid_version {
@@ -522,9 +522,9 @@ sub uuid_to_string {
         if $uuid =~ m/$IS_UUID_STRING/;
     croak __PACKAGE__ . "::uuid_to_string(): Invalid UUID!"
         unless length $uuid == 16;
-    return  join q{-},
+    return  join '-',
             map { unpack 'H*', $_ }
-            map { substr $uuid, 0, $_, q{} }
+            map { substr $uuid, 0, $_, '' }
             ( 4, 2, 2, 2, 6 );
 }
 
@@ -696,16 +696,14 @@ sub _init_globals {
     if (!defined $Last_Pid || $Last_Pid != $$) {
         $Last_Pid = $$;
         # $Clk_Seq = _generate_clk_seq();
-        my $new_clk_seq = _generate_clk_seq();
-        if (!defined($Clk_Seq) || $new_clk_seq != $Clk_Seq) {
-            $Clk_Seq = $new_clk_seq;
-        }
-        else {
-            $new_clk_seq = _generate_clk_seq();
-            if ($new_clk_seq != $Clk_Seq) {
+        # There's a slight chance to get the same value as $Clk_Seq ...
+        for (my $i = 0; $i <= 5; $i++) {
+            my $new_clk_seq = _generate_clk_seq();
+            if (!defined($Clk_Seq) || $new_clk_seq != $Clk_Seq) {
                 $Clk_Seq = $new_clk_seq;
+                last;
             }
-            else {
+            if ($i == 5) {
                 croak __PACKAGE__
                     . "::_init_globals(): Can't get unique clk_seq!";
             }
@@ -716,7 +714,6 @@ sub _init_globals {
     return;
 }
 
-
 my $Last_Timestamp;
 
 sub _get_clk_seq {
@@ -726,12 +723,18 @@ sub _get_clk_seq {
     lock $Last_Timestamp;
     lock $Clk_Seq;
 
-    if (!defined $Last_Timestamp || $ts <= $Last_Timestamp) {
-        $Clk_Seq = ($Clk_Seq + 1) % 65536;
+    #if (!defined $Last_Timestamp || $ts <= $Last_Timestamp) {
+    if (defined $Last_Timestamp && $ts <= $Last_Timestamp) {
+        #$Clk_Seq = ($Clk_Seq + 1) % 65536;
+        # The old variant used modulo, but this looks unnecessary,
+        # because we should only use the signigicant part of the
+        # number, and that also lets the counter circle around:
+        $Clk_Seq = ($Clk_Seq + 1) & 0x3fff;
     }
     $Last_Timestamp = $ts;
 
-    return $Clk_Seq & 0x03ff;
+    #return $Clk_Seq & 0x03ff; # no longer needed - and it was wrong too!
+    return $Clk_Seq;
 }
 
 sub _generate_clk_seq {
@@ -739,11 +742,12 @@ sub _generate_clk_seq {
     # _init_globals();
 
     my @data;
-    push @data, q{}  . $$;
-    push @data, q{:} . Time::HiRes::time();
+    push @data, ''  . $$;
+    push @data, ':' . Time::HiRes::time();
 
     # 16 bit digest
-    return unpack 'n', _digest_as_octets(2, @data);
+    # We should return only the significant part of the number!
+    return (unpack 'n', _digest_as_octets(2, @data)) & 0x3fff;
 }
 
 sub _random_node_id {
@@ -777,9 +781,9 @@ sub _fold_into_octets {
     my $x = "\x0" x $num_octets;
 
     while (length $s > 0) {
-        my $n = q{};
+        my $n = '';
         while (length $x > 0) {
-            my $c = ord(substr $x, -1, 1, q{}) ^ ord(substr $s, -1, 1, q{});
+            my $c = ord(substr $x, -1, 1, '') ^ ord(substr $s, -1, 1, '');
             $n = chr($c) . $n;
             last if length $s <= 0;
         }
@@ -835,7 +839,12 @@ UUIDs.
 
 =head1 AUTHOR
 
-Much of this code is borrowed from UUID::Generator by ITO Nobuaki
+Christian Augustin, C<< <mail at caugustin.de> >>
+
+
+=head1 CONTRIBUTORS
+
+Some of this code is based on UUID::Generator by ITO Nobuaki
 E<lt>banb@cpan.orgE<gt>. But that module is announced to be marked as
 "deprecated" in the future and it is much too complicated for my liking.
 
@@ -843,9 +852,8 @@ So I decided to reduce it to the necessary parts and to re-implement those
 parts with a functional interface ...
 
 Jesse Vincent, C<< <jesse at bestpractical.com> >>, improved version 1.02 with
-his tips and a heavy refactoring. Consider him a co-author of UUID::Tiny.
+his tips and a heavy refactoring.
 
--- Christian Augustin, C<< <mail at caugustin.de> >>
 
 
 =head1 BUGS
@@ -897,11 +905,14 @@ Thanks to Jesse Vincent (C<< <jesse at bestpractical.com> >>) for his feedback, 
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2009 Christian Augustin, all rights reserved.
+Copyright 2009, 2010 Christian Augustin, all rights reserved.
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
 
+ITO Nobuaki has very graciously given me permission to take over copyright for
+the portions of code that are copied from or resemble his work (see
+rt.cpan.org #53642 L<https://rt.cpan.org/Public/Bug/Display.html?id=53642>).
 
 =cut
 
