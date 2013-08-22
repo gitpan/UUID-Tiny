@@ -1,5 +1,17 @@
 Revision history for UUID-Tiny
 
+1.04    2013-08-22, caugustin.de
+        Fixed typos from bug report #87187.
+        Rejected bug report #83073 (UUID::Tiny correctly sets the variant).
+        Thread-tests still not running (Mac OS X 10.8.x and other machines).
+        Thread-tests removed, bug report #57188 deferred.
+        POD changed to better reflect the new standard interface.
+        Fixed a bug in Makefile.PL reported by Matt Koscica.
+
+1.03_01 2010-05-04, caugustin.de
+        Thread-patches from Michael C. Schwern applied.
+        Test not running on Mac OS X 10.6.3 ...
+
 1.03    2010-01-31, caugustin.de
         Once again clk_seq uniqueness and fixing some small bugs with
         _get_clk_seq() (due to failed CPAN Tester's ID 6750882).

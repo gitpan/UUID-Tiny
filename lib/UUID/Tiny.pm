@@ -9,7 +9,7 @@ use MIME::Base64;
 use Time::HiRes;
 use POSIX;
 
-our $SHA1_CALCULATOR = undef;
+my $SHA1_CALCULATOR = undef;
 
 {
     # Check for availability of SHA-1 ...
@@ -22,7 +22,7 @@ our $SHA1_CALCULATOR = undef;
     };
 };
 
-our $MD5_CALCULATOR = Digest::MD5->new();
+my $MD5_CALCULATOR = Digest::MD5->new();
 
 
 # ToDo:
@@ -37,36 +37,39 @@ UUID::Tiny - Pure Perl UUID Support With Functional Interface
 
 =head1 VERSION
 
-Version 1.03
+Version 1.04
 
 =cut
 
-our $VERSION = '1.03';
+our $VERSION = '1.04';
 
 
 =head1 SYNOPSIS
 
 Create version 1, 3, 4 and 5 UUIDs:
 
-    use UUID::Tiny;
+    use UUID::Tiny ':std';
 
-    my $v1_mc_UUID         = create_UUID();
-    my $v3_md5_UUID        = create_UUID(UUID_V3, $str);
-    my $v3_md5_UUID        = create_UUID(UUID_V3, UUID_NS_DNS, 'caugustin.de');
-    my $v4_rand_UUID       = create_UUID(UUID_V4);
-    my $v5_sha1_UUID       = create_UUID(UUID_V5, $str);
-    my $v5_with_NS_UUID    = create_UUID(UUID_V5, UUID_NS_DNS, 'caugustin.de');
+    my $v1_mc_UUID      = create_uuid();
+    my $v1_mc_UUID_2    = create_uuid(UUID_V1);
+    my $v1_mc_UUID_3    = create_uuid(UUID_TIME);
+    my $v3_md5_UUID     = create_uuid(UUID_V3, $str);
+    my $v3_md5_UUID_2   = create_uuid(UUID_MD5, UUID_NS_DNS, 'caugustin.de');
+    my $v4_rand_UUID    = create_uuid(UUID_V4);
+    my $v4_rand_UUID_2  = create_uuid(UUID_RANDOM);
+    my $v5_sha1_UUID    = create_uuid(UUID_V5, $str);
+    my $v5_with_NS_UUID = create_uuid(UUID_SHA1, UUID_NS_DNS, 'caugustin.de');
 
-    my $v1_mc_UUID_string  = create_UUID_as_string(UUID_V1);
-    my $v3_md5_UUID_string = UUID_to_string($v3_md5_UUID);
+    my $v1_mc_UUID_string  = create_uuid_as_string(UUID_V1);
+    my $v3_md5_UUID_string = uuid_to_string($v3_md5_UUID);
 
-    if ( version_of_UUID($v1_mc_UUID) == 1   ) { ... };
-    if ( version_of_UUID($v5_sha1_UUID) == 5 ) { ... };
-    if ( is_UUID_string($v1_mc_UUID_string)  ) { ... };
-    if ( equal_UUIDs($uuid1, $uuid2)         ) { ... };
+    if ( version_of_uuid($v1_mc_UUID) == 1   ) { ... };
+    if ( version_of_uuid($v5_sha1_UUID) == 5 ) { ... };
+    if ( is_uuid_string($v1_mc_UUID_string)  ) { ... };
+    if ( equal_uuids($uuid1, $uuid2)         ) { ... };
 
-    my $uuid_time    = time_of_UUID($v1_mc_UUID);
-    my $uuid_clk_seq = clk_seq_of_UUID($v1_mc_UUID);
+    my $uuid_time    = time_of_uuid($v1_mc_UUID);
+    my $uuid_clk_seq = clk_seq_of_uuid($v1_mc_UUID);
 
 =cut
 
@@ -86,8 +89,8 @@ and transformations - just string and binary. Conversion, test and time
 functions equally accept UUIDs and UUID strings, so don't bother to convert
 UUIDs for them!
 
-All constants and public functions are exported by default, because if you
-didn't need/want them, you wouldn't use this module ...
+Continuing with 1.0x versions all constants and public functions are exported
+by default, but this will change in the future (see below). 
 
 UUID::Tiny deliberately uses a minimal functional interface for UUID creation
 (and conversion/testing), because in this case OO looks like overkill to me
@@ -101,9 +104,10 @@ modules like L<Data::UUID>.
 This module is "fork safe", especially for random UUIDs (it works around
 Perl's rand() problem when forking processes).
 
-This module should be "thread safe," because its global variables
-are locked in the functions that access them. (Not tested - if you can provide
-some tests, please tell me!)
+This module is currently B<not> "thread safe". Even though I've incorporated
+some changes proposed by Michael G. Schwern (thanks!), Digest::MD5 and
+Digest::SHA seem so have trouble with threads. There is a test file for
+threads, but it is de-activated. So use at your own risk!
 
 =cut
 
@@ -127,7 +131,7 @@ Digest::SHA1 installed, you can use Digest::SHA::PurePerl instead.
 =cut
 
 
-=head1 ATTENTION! NEW STANDARD INTERFACE (IN PREPARATION FOR V2.00)
+=head1 ATTENTION! NEW STANDARD INTERFACE
 
 After some debate I'm convinced that it is more Perlish (and far easier to
 write) to use all-lowercase function names - without exceptions. And that it
@@ -140,8 +144,8 @@ import from version 1.02 on:
     use UUID::Tiny ':std';
     my $md5_uuid = create_uuid(UUID_MD5, $str);
 
-In preparation for the upcoming version 2.00 of UUID::Tiny you should use the
-C<:legacy> tag if you want to stay with the version 1.0x interface:
+In preparation for future version of UUID::Tiny you have to use the
+C<:legacy> tag if you want to stay with the version 1.0 interface:
 
     use UUID::Tiny ':legacy';
     my $md5_uuid = create_UUID(UUID_V3, $str);
@@ -279,7 +283,7 @@ other functions).
 
 C<create_UUID()> creates standard binary UUIDs in network byte order
 (MSB first), C<create_UUID_as_string()> creates the standard string
-represantion of UUIDs.
+representation of UUIDs.
 
 All query and test functions (except C<is_UUID_string>) accept both
 representations.
@@ -388,8 +392,6 @@ sub _create_v3_uuid {
     my $name    = shift;
     my $uuid    = '';
 
-    lock $MD5_CALCULATOR;
-
     # Create digest in UUID ...
     $MD5_CALCULATOR->reset();
     $MD5_CALCULATOR->add($ns_uuid);
@@ -440,8 +442,6 @@ sub _create_v5_uuid {
             . 'Digest::SHA::PurePerl to use SHA-1 based UUIDs.'
             ;
     }
-
-    lock $SHA1_CALCULATOR;
 
     $SHA1_CALCULATOR->reset();
     $SHA1_CALCULATOR->add($ns_uuid);
@@ -543,7 +543,7 @@ strings, variants with different positions of C<-> and Base64 encoded UUIDs.
 
 Throws an exception if string can't be interpreted as a UUID.
 
-If you want to make shure to have a "pure" standard UUID representation, check
+If you want to make sure to have a "pure" standard UUID representation, check
 with C<is_UUID_string>!
 
 =cut
@@ -681,7 +681,7 @@ sub equal_uuids {
 # Private functions ...
 #
 my $Last_Pid;
-my $Clk_Seq;
+my $Clk_Seq :shared;
 
 # There is a problem with $Clk_Seq and rand() on forking a process using
 # UUID::Tiny, because the forked process would use the same basic $Clk_Seq and
@@ -690,7 +690,6 @@ my $Clk_Seq;
 # time before using $Clk_Seq or rand() ...
 
 sub _init_globals {
-    lock $Last_Pid;
     lock $Clk_Seq;
 
     if (!defined $Last_Pid || $Last_Pid != $$) {
@@ -714,7 +713,7 @@ sub _init_globals {
     return;
 }
 
-my $Last_Timestamp;
+my $Last_Timestamp :shared;
 
 sub _get_clk_seq {
     my $ts = shift;
@@ -727,7 +726,7 @@ sub _get_clk_seq {
     if (defined $Last_Timestamp && $ts <= $Last_Timestamp) {
         #$Clk_Seq = ($Clk_Seq + 1) % 65536;
         # The old variant used modulo, but this looks unnecessary,
-        # because we should only use the signigicant part of the
+        # because we should only use the significant part of the
         # number, and that also lets the counter circle around:
         $Clk_Seq = ($Clk_Seq + 1) & 0x3fff;
     }
@@ -821,7 +820,7 @@ address with Perl is really dirty (and slow);
 
 =item B<Should version 3 or version 5 be used?>
 
-Using SHA-1 reduces the probabillity of collisions and provides a better
+Using SHA-1 reduces the probability of collisions and provides a better
 "randomness" of the resulting UUID compared to MD5. Version 5 is recommended
 in RFC 4122 if backward compatibility is not an issue.
 
@@ -834,7 +833,8 @@ creating UUIDs from file content rather than names.
 =head1 UUID DEFINITION
 
 See RFC 4122 (L<http://www.ietf.org/rfc/rfc4122.txt>) for technical details on
-UUIDs.
+UUIDs. Wikipedia gives a more palatable description at
+L<http://en.wikipedia.org/wiki/Universally_unique_identifier>.
 
 
 =head1 AUTHOR
@@ -853,6 +853,9 @@ parts with a functional interface ...
 
 Jesse Vincent, C<< <jesse at bestpractical.com> >>, improved version 1.02 with
 his tips and a heavy refactoring.
+
+Michael G. Schwern provided a patch for better thread support (as far as
+UUID::Tiny can be improved itself) that is incorporated in version 1.04. 
 
 
 
@@ -905,7 +908,7 @@ Thanks to Jesse Vincent (C<< <jesse at bestpractical.com> >>) for his feedback, 
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2009, 2010 Christian Augustin, all rights reserved.
+Copyright 2009, 2010, 2013 Christian Augustin, all rights reserved.
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

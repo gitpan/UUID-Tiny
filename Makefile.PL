@@ -19,7 +19,7 @@ WriteMakefile(
 		'POSIX'        => 0,
         'Test::More'   => 0,
         'IO::File'     => 0,
-        ($[ < 5.010000 ? ( 'Digest::SHA1' => 0) :()), # only require Digest::SHA1 on 5.8
+        ($] < 5.010000 ? ( 'Digest::SHA1' => 0) :()), # only require Digest::SHA1 on 5.8
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'UUID-Tiny-*' },

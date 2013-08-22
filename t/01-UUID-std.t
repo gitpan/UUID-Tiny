@@ -107,7 +107,7 @@ is(
 
 my $test_data = do {
     local $/;
-    open my $fh, '<', 't/data/test.jpg';
+    open my $fh, '<', 't/data/test.jpg' or croak "Open failed!";
     <$fh>;
 };
 
@@ -192,6 +192,7 @@ ok(
 #
 my $now = time();
 my $v1_uuid = create_uuid();
+#diag uuid_to_string($v1_uuid);
 ok( version_of_uuid($v1_uuid) == 1, 'create_uuid creates v1 UUID' );
 
 # Check time_of_uuid() ...
@@ -254,6 +255,7 @@ for (my $i = 0; $i < 10000; $i++) {
 # Generate v4 UUIDs ...
 #
 my $v4_uuid = create_uuid(UUID_RANDOM);
+#diag uuid_to_string($v4_uuid);
 ok( version_of_uuid($v4_uuid) == 4, 'create_uuid creates v4 UUID' );
 
 # Check for uniqueness of random UUIDs ...
